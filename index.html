@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <title>ible.ai</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            overflow-x: hidden;
+        }
+
+        /* Graph network background */
+        .hero {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Network graph animation */
+        .graph-network {
+            position: absolute;
+            top: -20%;
+            left: -20%;
+            width: 140%;
+            height: 140%;
+            pointer-events: none;
+            opacity: 0.4;
+            transition: opacity 0.3s ease;
+        }
+
+        .graph-network.interactive {
+            opacity: 0.6;
+        }
+
+        .network-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .network-node {
+            fill: rgba(99, 102, 241, 0.7);
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 0.5;
+            r: 2;
+            transition: all 0.3s ease;
+        }
+
+        .network-node.active {
+            fill: rgba(139, 92, 246, 0.9);
+            r: 3;
+            filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.8));
+        }
+
+        .network-connection {
+            stroke: rgba(99, 102, 241, 0.3);
+            stroke-width: 0.8;
+            fill: none;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+
+        .network-connection.enhanced {
+            stroke: rgba(139, 92, 246, 0.7);
+            stroke-width: 1.5;
+            opacity: 1;
+            filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.5));
+        }
+
+        .network-connection.pulse {
+            animation: connectionPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes connectionPulse {
+
+            0%,
+            100% {
+                stroke-width: 0.8;
+                opacity: 0.6;
+            }
+
+            50% { 
+                stroke-width: 1.2;
+                opacity: 0.9;
+            }
+        }
+
+        /* Portal transition styles */
+        .portal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            backdrop-filter: blur(0px);
+        }
+
+        .portal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            backdrop-filter: blur(20px);
+        }
+
+        .portal-vortex {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100px;
+            height: 100px;
+            transform: translate(-50%, -50%) scale(0);
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, 
+                rgba(99, 102, 241, 0.8), 
+                rgba(139, 92, 246, 0.8), 
+                rgba(236, 72, 153, 0.8), 
+                rgba(99, 102, 241, 0.8));
+            animation: portalSpin 2s linear infinite;
+            transition: transform 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 
+                0 0 50px rgba(99, 102, 241, 0.6),
+                inset 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .portal-overlay.active .portal-vortex {
+            transform: translate(-50%, -50%) scale(20);
+        }
+
+        @keyframes portalSpin {
+            from { rotate: 0deg; }
+            to { rotate: 360deg; }
+        }
+
+        .portal-message {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            text-align: center;
+            z-index: 10001;
+            text-shadow: 0 0 20px rgba(99, 102, 241, 0.8);
+        }
+
+        .portal-overlay.active .portal-message {
+            opacity: 1;
+            animation: messageGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes messageGlow {
+            from { text-shadow: 0 0 20px rgba(99, 102, 241, 0.8); }
+            to { text-shadow: 0 0 30px rgba(139, 92, 246, 1), 0 0 40px rgba(99, 102, 241, 0.6); }
+        }
+
+        /* Enhanced graph network for portal transition */
+        .graph-network.portal-mode {
+            opacity: 1;
+            animation: networkPulse 0.5s ease-out;
+        }
+
+        @keyframes networkPulse {
+            0% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .network-connection.portal-active {
+            stroke: rgba(99, 102, 241, 0.9);
+            stroke-width: 2;
+            animation: portalConnectionPulse 0.3s ease-out;
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8));
+        }
+
+        @keyframes portalConnectionPulse {
+            0% { stroke-width: 0.8; opacity: 0.6; }
+            50% { stroke-width: 3; opacity: 1; }
+            100% { stroke-width: 2; opacity: 0.9; }
+        }
+
+        .network-node.portal-active {
+            fill: rgba(139, 92, 246, 1);
+            r: 4;
+            filter: drop-shadow(0 0 12px rgba(139, 92, 246, 1));
+            animation: portalNodePulse 0.3s ease-out;
+        }
+
+        @keyframes portalNodePulse {
+            0% { r: 2; }
+            50% { r: 6; }
+            100% { r: 4; }
+        }
+
+        /* Enhanced CTA button for portal effect */
+        .btn-portal {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6, #ec4899);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-portal:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.6);
+            background-size: 150% 150%;
+        }
+
+        .btn-portal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-portal:hover::before {
+            left: 100%;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .data-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .data-point {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(99, 102, 241, 0.6);
+            border-radius: 50%;
+            animation: dataFlow 25s infinite linear;
+            box-shadow: 0 0 6px rgba(99, 102, 241, 0.8);
+        }
+
+        .data-point.accent {
+            background: rgba(139, 92, 246, 0.7);
+            box-shadow: 0 0 8px rgba(139, 92, 246, 0.9);
+            animation-duration: 30s;
+        }
+
+        @keyframes dataFlow {
+            0% {
+                transform: translate(-10px, 120vh) scale(0);
+                opacity: 0;
+            }
+
+            5% {
+                opacity: 1;
+                transform: translate(0px, 110vh) scale(1);
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(100px, -10vh) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        nav.scrolled {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        nav.scrolled .logo {
+            color: #1f2937;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        nav.scrolled .nav-links a {
+            color: #6b7280;
+        }
+
+        .nav-links a:hover {
+            color: #fbbf24;
+            transform: translateY(-2px);
+        }
+
+        /* Hero Content */
+        .hero-content {
+            text-align: center;
+            max-width: 800px;
+            padding: 2rem;
+            z-index: 10;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            color: white;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero .subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 3rem;
+            font-weight: 400;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #6366f1;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-3px);
+        }
+
+        /* Main content sections */
+        .section {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: #1f2937;
+        }
+
+        /* Product showcase */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #f3f4f6;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-card h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+
+        .product-card p {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        .product-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .product-link:hover {
+            gap: 1rem;
+            color: #4f46e5;
+        }
+
+        /* Features section */
+        .features {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .feature h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+
+        .feature p {
+            color: #6b7280;
+        }
+
+        /* Team section */
+        .team {
+            text-align: center;
+        }
+
+        .team-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .team p {
+            font-size: 1.1rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+
+        /* Footer */
+        footer {
+            background: #1f2937;
+            color: white;
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #9ca3af;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .cta-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .section {
+                padding: 3rem 1rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Scroll reveal animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.6s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">ible.ai</a>
+            <ul class="nav-links">
+                <li><a href="#products">Products</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#team">Team</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <!-- Graph Network Background -->
+        <div class="graph-network" id="graphNetwork">
+            <svg class="network-svg" id="networkSvg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+                <!-- Generated fractal network will be inserted here -->
+            </svg>
+        </div>
+
+        <!-- Floating data points -->
+        <div class="data-particles" id="dataParticles"></div>
+
+        <div class="hero-content">
+            <h1>welcome</h1>
+            <p class="subtitle">we're on a mission to build ai-centric software that is actually useful</p>
+            <div style="padding-bottom:20px;word-wrap:break-word;text-align: left;">
+                <div style="color:white;display:flex">
+                    <div>
+                        <div style="margin-bottom:0;line-height:normal;font-size:35px">
+                            <div class="definition-header"><span>-ible</span>
+                            </div>
+                        </div>
+                        <div><span>/<span>ib(ə)l</span>/</span></div>
+                    </div>
+                </div>
+                <div style="display:block; color:white; margin-left:16px;line-height: 16px">
+                    <div style="line-height: 30px;padding-bottom: 10px;"><span><i>suffix</i></span></div>
+                    <ol style="display:table;padding-bottom: 30px">
+                        <li>
+                            <div style="margin-left:16px">
+                                <span><i><small>(forming adjectives)</small></i> able to be.</span>
+                            </div>
+                        </li>
+                        <li>
+                            <div style="margin-left:16px">
+                                <span><i><small>(forming adjectives)</small></i> suitable for
+                                    being.</span>
+                            </div>
+
+                        </li>
+                        <li>
+                            <div style="margin-left:16px">
+                                <span><i><small>(forming adjectives)</small></i> causing.</span>
+                            </div>
+                        </li>
+                        <li>
+                            <div style="margin-left:16px">
+                                <span><i><small>(forming adjectives)</small></i> having the quality
+                                    to.</span>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            <div class="cta-group">
+                <button id="portalButton" class="btn btn-primary btn-portal">🌀 Enter Graphible</button>
+                <a href="https://github.com/ible-ai" style="text-align: center;" class="btn btn-secondary">View on GitHub →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portal Overlay -->
+    <div class="portal-overlay" id="portalOverlay">
+        <div class="portal-vortex"></div>
+        <div class="portal-message">Entering the Knowledge Graph...</div>
+    </div>
+
+    <!-- Products Section -->
+    <section id="products" class="section">
+        <h2>Our Products</h2>
+        <div class="product-grid">
+            <div class="product-card reveal">
+                <div class="product-icon">🕸️</div>
+                <h3>Graphible</h3>
+                <p>Transform conversations into interactive knowledge graphs. Explore ideas visually with AI-powered
+                    learning maps that adapt to your thinking.</p>
+                <a href="https://ible-ai.github.io/graphible" class="product-link">Try Live Demo →</a>
+            </div>
+            <div class="product-card reveal">
+                <div class="product-icon">🔬</div>
+                <h3>Research Tools</h3>
+                <p>Advanced AI research and analysis tools. Connect patterns across data, generate insights, and
+                    accelerate discovery.</p>
+                <a href="#" class="product-link">Coming Soon →</a>
+            </div>
+            <div class="product-card reveal">
+                <div class="product-icon">🛠️</div>
+                <h3>Developer SDK</h3>
+                <p>Build your own AI-powered applications with our privacy-first toolkit. Local inference, cloud
+                    flexibility, browser compatibility.</p>
+                <a href="#" class="product-link">Early Access →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="section features">
+        <h2>why ible.ai</h2>
+        <div class="features-grid">
+            <div class="feature reveal">
+                <span class="feature-icon">🔒</span>
+                <h3>Privacy First</h3>
+                <p>We don't want your data.
+                </p>
+            </div>
+            <div class="feature reveal">
+                <span class="feature-icon">⚡</span>
+                <h3>Brrrrrrrr</h3>
+                <p>rrrrrrrrrrrrrr</p>
+            </div>
+            <div class="feature reveal">
+                <span class="feature-icon">🎯</span>
+                <h3>Developer Friendly</h3>
+                <p>Some parts of the codebase practically make sense.</p>
+            </div>
+            <div class="feature reveal">
+                <span class="feature-icon">🌍</span>
+                <h3>Works Everywhere</h3>
+                <p>Hopefully.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section id="team" class="section team">
+        <div class="team-content reveal">
+            <h2>help us make more trash</h2>
+            <p>We're people and dogs who like to build stuff and watch people build stuff and squirrels.</p>
+            <a href="#contact" class="btn btn-primary">Get in Touch</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="https://github.com/ible-ai">GitHub</a>
+            </div>
+            <p style="margin-top: 2rem; color: #9ca3af;">&copy; 2025</p>
+        </div>
+    </footer>
+
+    <script>
+        // Optimized fractal network generation
+        function generateFractalNetwork() {
+            const svg = document.getElementById('networkSvg');
+            const nodes = [];
+            const connections = [];
+            
+            // Reduced complexity fractal generation
+            function generateFractalLevel(centerX, centerY, radius, depth, maxDepth) {
+                if (depth > maxDepth) return [];
+                
+                const levelNodes = [];
+                // Reduced node count per level for performance
+                const angleStep = (2 * Math.PI) / (depth === 0 ? 1 : Math.pow(1.8, depth + 1));
+                const nodeCount = depth === 0 ? 1 : Math.ceil(Math.pow(1.8, depth + 1));
+                
+                for (let i = 0; i < nodeCount; i++) {
+                    const angle = i * angleStep;
+                    const x = centerX + radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    
+                    // Simplified variation calculation
+                    const variation = 15 * Math.sin(angle * 2) * (depth + 1) / maxDepth;
+                    const finalX = x + variation;
+                    const finalY = y + variation * 0.6;
+                    
+                    const node = {
+                        id: nodes.length,
+                        x: finalX,
+                        y: finalY,
+                        depth: depth,
+                        angle: angle
+                    };
+                    
+                    nodes.push(node);
+                    levelNodes.push(node);
+                }
+                
+                // Recursively generate next level
+                if (depth < maxDepth) {
+                    levelNodes.forEach(node => {
+                        const childRadius = radius * 0.65;
+                        generateFractalLevel(node.x, node.y, childRadius, depth + 1, maxDepth);
+                    });
+                }
+                
+                return levelNodes;
+            }
+            
+            // Generate fractal with reduced depth for performance
+            generateFractalLevel(600, 400, 250, 0, 2);
+            
+            // Optimized connection generation
+            function connectNodes() {
+                // Pre-calculate distances only once
+                const distances = new Map();
+                
+                nodes.forEach(node => {
+                    const maxConnections = 3 + Math.floor(Math.random() * 2); // Reduced connections
+                    let connectionCount = 0;
+                    
+                    // Get cached distances or calculate once
+                    let nodeDistances = distances.get(node.id);
+                    if (!nodeDistances) {
+                        nodeDistances = nodes
+                            .filter(other => other.id !== node.id)
+                            .map(other => {
+                                const dist = Math.sqrt(Math.pow(node.x - other.x, 2) + Math.pow(node.y - other.y, 2));
+                                return { node: other, distance: dist };
+                            })
+                            .sort((a, b) => a.distance - b.distance)
+                            .slice(0, 8); // Only consider closest 8 nodes
+                        
+                        distances.set(node.id, nodeDistances);
+                    }
+                    
+                    // Connect to closest nodes with simplified logic
+                    for (let i = 0; i < Math.min(nodeDistances.length, maxConnections); i++) {
+                        const target = nodeDistances[i];
+                        
+                        // Simplified probability calculation
+                        const probability = Math.max(0.4, 1 - (target.distance / 200));
+                        
+                        if (Math.random() < probability && connectionCount < maxConnections) {
+                            // Quick duplicate check using Set
+                            const connKey = Math.min(node.id, target.node.id) + '-' + Math.max(node.id, target.node.id);
+                            
+                            if (!connections.find(c => c.key === connKey)) {
+                                connections.push({
+                                    from: node.id,
+                                    to: target.node.id,
+                                    distance: target.distance,
+                                    key: connKey
+                                });
+                                connectionCount++;
+                            }
+                        }
+                    }
+                });
+                
+                // Reduced long-range connections
+                const longRangeCount = Math.floor(nodes.length * 0.15);
+                for (let i = 0; i < longRangeCount; i++) {
+                    const node1 = nodes[Math.floor(Math.random() * nodes.length)];
+                    const node2 = nodes[Math.floor(Math.random() * nodes.length)];
+                    
+                    if (node1.id !== node2.id) {
+                        const connKey = Math.min(node1.id, node2.id) + '-' + Math.max(node1.id, node2.id);
+                        
+                        if (!connections.find(c => c.key === connKey)) {
+                            connections.push({
+                                from: node1.id,
+                                to: node2.id,
+                                distance: Math.sqrt(Math.pow(node1.x - node2.x, 2) + Math.pow(node1.y - node2.y, 2)),
+                                key: connKey
+                            });
+                        }
+                    }
+                }
+            }
+            
+            connectNodes();
+            
+            // Efficient DOM creation using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            
+            // Create connections group
+            const connectionsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            connectionsGroup.setAttribute('class', 'connections');
+            
+            connections.forEach((conn, index) => {
+                const fromNode = nodes[conn.from];
+                const toNode = nodes[conn.to];
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('class', 'network-connection');
+                line.setAttribute('x1', fromNode.x);
+                line.setAttribute('y1', fromNode.y);
+                line.setAttribute('x2', toNode.x);
+                line.setAttribute('y2', toNode.y);
+                line.setAttribute('data-index', index);
+                
+                connectionsGroup.appendChild(line);
+            });
+            
+            fragment.appendChild(connectionsGroup);
+            
+            // Create nodes group
+            const nodesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            nodesGroup.setAttribute('class', 'nodes');
+            
+            nodes.forEach((node, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('class', 'network-node');
+                circle.setAttribute('cx', node.x);
+                circle.setAttribute('cy', node.y);
+                circle.setAttribute('r', 2);
+                circle.setAttribute('data-index', index);
+                circle.setAttribute('data-depth', node.depth);
+                
+                nodesGroup.appendChild(circle);
+            });
+            
+            fragment.appendChild(nodesGroup);
+            
+            // Clear and append all at once
+            svg.innerHTML = '';
+            svg.appendChild(fragment);
+            
+            return { nodes, connections };
+        }
+
+        // Optimized interaction system with throttling
+        let networkData = null;
+        let animationFrame = null;
+        let lastUpdate = 0;
+        const UPDATE_THRESHOLD = 50; // Throttle to ~20fps
+
+        function updateNetworkInteractivity(mouseX, mouseY, scrollProgress) {
+            if (!networkData) return;
+            
+            const now = Date.now();
+            if (now - lastUpdate < UPDATE_THRESHOLD) return;
+            lastUpdate = now;
+            
+            const nodes = document.querySelectorAll('.network-node');
+            const connections = document.querySelectorAll('.network-connection');
+            
+            // Batch DOM updates
+            const activeNodes = new Set();
+            const enhancedConnections = new Set();
+            const pulseConnections = new Set();
+            
+            // Simplified distance calculation using viewport coordinates
+            const heroRect = document.querySelector('.hero').getBoundingClientRect();
+            const relativeMouseX = mouseX - heroRect.left;
+            const relativeMouseY = mouseY - heroRect.top;
+            
+            nodes.forEach((node, index) => {
+                const x = parseFloat(node.getAttribute('cx'));
+                const y = parseFloat(node.getAttribute('cy'));
+                
+                // Convert SVG coordinates to screen coordinates (simplified)
+                const screenX = (x / 1200) * heroRect.width;
+                const screenY = (y / 800) * heroRect.height;
+                
+                const distance = Math.sqrt(
+                    Math.pow(relativeMouseX - screenX, 2) + 
+                    Math.pow(relativeMouseY - screenY, 2)
+                );
+                
+                if (distance < 120) {
+                    activeNodes.add(index);
+                    
+                    // Find connected lines more efficiently
+                    networkData.connections.forEach((conn, connIndex) => {
+                        if (conn.from === index || conn.to === index) {
+                            enhancedConnections.add(connIndex);
+                            if (distance < 80) {
+                                pulseConnections.add(connIndex);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Apply all changes in batches
+            nodes.forEach((node, index) => {
+                if (activeNodes.has(index)) {
+                    node.classList.add('active');
+                } else {
+                    node.classList.remove('active');
+                }
+            });
+            
+            connections.forEach((conn, index) => {
+                const hasClasses = conn.classList.contains('enhanced') || conn.classList.contains('pulse');
+                
+                if (enhancedConnections.has(index)) {
+                    if (!hasClasses) conn.classList.add('enhanced');
+                    if (pulseConnections.has(index)) {
+                        conn.classList.add('pulse');
+                    } else {
+                        conn.classList.remove('pulse');
+                    }
+                } else {
+                    if (hasClasses) {
+                        conn.classList.remove('enhanced', 'pulse');
+                    }
+                }
+            });
+            
+            // Scroll-based enhancements (reduced frequency)
+            if (Math.random() < 0.3) { // Only update 30% of the time
+                const enhanceCount = Math.floor(connections.length * scrollProgress * 0.2);
+                connections.forEach((conn, index) => {
+                    if (index < enhanceCount && scrollProgress > 0.1) {
+                        conn.classList.add('enhanced');
+                    } else if (scrollProgress <= 0.1) {
+                        conn.classList.remove('enhanced');
+                    }
+                });
+            }
+        }
+
+        // Portal transition system
+        function activatePortal() {
+            const portalOverlay = document.getElementById('portalOverlay');
+            const graphNetwork = document.getElementById('graphNetwork');
+            const nodes = document.querySelectorAll('.network-node');
+            const connections = document.querySelectorAll('.network-connection');
+            
+            // Stage 1: Activate network with dramatic effect
+            graphNetwork.classList.add('portal-mode');
+            
+            // Activate all nodes and connections in sequence
+            let delay = 0;
+            nodes.forEach((node, index) => {
+                setTimeout(() => {
+                    node.classList.add('portal-active');
+                }, delay);
+                delay += 50;
+            });
+            
+            // Activate connections with staggered timing
+            setTimeout(() => {
+                connections.forEach((connection, index) => {
+                    setTimeout(() => {
+                        connection.classList.add('portal-active');
+                    }, index * 30);
+                });
+            }, 200);
+            
+            // Stage 2: Portal appears
+            setTimeout(() => {
+                portalOverlay.classList.add('active');
+            }, 800);
+            
+            // Stage 3: Portal message and final transition
+            setTimeout(() => {
+                // Redirect to Graphible with dramatic effect
+                window.location.href = 'https://ible-ai.github.io/graphible';
+            }, 2500);
+        }
+
+        // Enhanced portal button interaction
+        function setupPortalButton() {
+            const portalButton = document.getElementById('portalButton');
+            
+            portalButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                activatePortal();
+            });
+            
+            // Add extra visual flair on hover
+            portalButton.addEventListener('mouseenter', () => {
+                // Briefly activate some random network elements
+                const nodes = document.querySelectorAll('.network-node');
+                const connections = document.querySelectorAll('.network-connection');
+                
+                for (let i = 0; i < 5; i++) {
+                    const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+                    const randomConnection = connections[Math.floor(Math.random() * connections.length)];
+                    
+                    setTimeout(() => {
+                        randomNode.classList.add('active');
+                        randomConnection.classList.add('enhanced');
+                        
+                        setTimeout(() => {
+                            randomNode.classList.remove('active');
+                            randomConnection.classList.remove('enhanced');
+                        }, 500);
+                    }, i * 100);
+                }
+            });
+        }
+        let mouseX = 0, mouseY = 0;
+        let mouseMoveThrottle = null;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            // Throttle mouse move updates
+            if (mouseMoveThrottle) return;
+            mouseMoveThrottle = setTimeout(() => {
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                animationFrame = requestAnimationFrame(() => {
+                    const scrollProgress = Math.min(window.scrollY / window.innerHeight, 1);
+                    updateNetworkInteractivity(mouseX, mouseY, scrollProgress);
+                });
+                mouseMoveThrottle = null;
+            }, 32); // ~30fps throttle
+        });
+
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            const graphNetwork = document.getElementById('graphNetwork');
+            const scrolled = window.scrollY;
+            const scrollProgress = Math.min(scrolled / window.innerHeight, 1);
+            
+            if (scrolled > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+
+            if (scrollProgress > 0.1) {
+                graphNetwork.classList.add('interactive');
+            } else {
+                graphNetwork.classList.remove('interactive');
+            }
+            
+            // Less frequent scroll updates
+            if (animationFrame) cancelAnimationFrame(animationFrame);
+            animationFrame = requestAnimationFrame(() => {
+                updateNetworkInteractivity(mouseX, mouseY, scrollProgress);
+            });
+        });
+
+        // Scroll reveal animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Create floating data particles
+        function createDataParticles() {
+            const container = document.getElementById('dataParticles');
+            const particleCount = 20;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = Math.random() > 0.7 ? 'data-point accent' : 'data-point';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 25 + 's';
+                
+                // Vary the animation path slightly
+                const drift = (Math.random() - 0.5) * 200;
+                particle.style.setProperty('--drift', drift + 'px');
+                
+                container.appendChild(particle);
+            }
+        }
+
+        // Initialize everything
+        networkData = generateFractalNetwork();
+        createDataParticles();
+        setupPortalButton();
+
+        // Add some interactivity to product cards
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateY(-10px) rotateY(5deg)';
+            });
+            
+            card.addEventListener('mouseleave', function () {
+                this.style.transform = 'translateY(0) rotateY(0deg)';
+            });
+        });
+    </script>
+</body>
+
+</html>
