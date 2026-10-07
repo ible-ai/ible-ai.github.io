@@ -1,6 +1,7 @@
 const header = document.querySelector('[data-header]');
 const menuButton = document.querySelector('[data-menu-button]');
 const nav = document.querySelector('[data-nav]');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function updateHeader() {
     header.classList.toggle('is-scrolled', window.scrollY > 24);
@@ -23,194 +24,221 @@ nav.addEventListener('click', (event) => {
     if (event.target.closest('a')) closeMenu();
 });
 
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && nav.classList.contains('is-open')) {
+        closeMenu();
+        menuButton.focus();
+    }
+});
+
 window.addEventListener('scroll', updateHeader, { passive: true });
 updateHeader();
 
-const canvas = document.querySelector('[data-network]');
-const hero = canvas.closest('.hero');
-const context = canvas.getContext('2d');
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const pointer = { x: -1000, y: -1000 };
-let points = [];
-let width = 0;
-let height = 0;
-let frame = 0;
-let lastFrame = 0;
-let isVisible = true;
-let portalEnergy = 0;
-let isEnteringPortal = false;
+/* A word built from a root and "-ible". The root's letters fade in, the
+   word re-centres as it grows, and the hyphen closes up to join them. */
 
-function seededRandom(seed) {
-    let value = seed >>> 0;
-    return () => {
-        value += 0x6D2B79F5;
-        let result = value;
-        result = Math.imul(result ^ result >>> 15, result | 1);
-        result ^= result + Math.imul(result ^ result >>> 7, result | 61);
-        return ((result ^ result >>> 14) >>> 0) / 4294967296;
+const clamp = (value) => Math.min(1, Math.max(0, value));
+const ease = (value) => {
+    const t = clamp(value);
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+};
+
+function span(className, text) {
+    const element = document.createElement('span');
+    element.className = className;
+    element.textContent = text;
+    return element;
+}
+
+function createSuffixWord(container) {
+    const word = span('suffix-word', '');
+    const measure = span('suffix-measure', '');
+    const hyphen = span('suffix-hyphen', '-');
+    const suffix = span('suffix-rest', 'ible');
+    word.append(hyphen, suffix);
+    container.append(word, measure);
+
+    let root = '';
+    let letters = [];
+    let offsets = [];
+    let rootWidth = 0;
+    let hyphenWidth = 0;
+    let suffixWidth = 0;
+
+    const widthOf = (text) => {
+        measure.textContent = text;
+        return measure.getBoundingClientRect().width;
     };
-}
 
-function buildNetwork() {
-    const bounds = hero.getBoundingClientRect();
-    const scale = Math.min(window.devicePixelRatio || 1, 2);
-    width = Math.round(bounds.width);
-    height = Math.round(bounds.height);
-    canvas.width = Math.round(width * scale);
-    canvas.height = Math.round(height * scale);
-    context.setTransform(scale, 0, 0, scale, 0, 0);
-
-    const random = seededRandom(ibleSeed(width, height));
-    const count = width < 640 ? 30 : 58;
-    points = Array.from({ length: count }, (_, index) => {
-        let x = random() * width;
-        const y = random() * height;
-
-        // Leave a calmer area behind the definition and primary actions.
-        if (x > width * 0.25 && x < width * 0.75 && y > height * 0.26 && y < height * 0.8) {
-            x = random() < 0.5 ? random() * width * 0.27 : width * (0.73 + random() * 0.27);
-        }
-
-        return {
-            x,
-            y,
-            vx: (random() - 0.5) * 0.11,
-            vy: (random() - 0.5) * 0.08,
-            radius: index % 11 === 0 ? 2.8 : 1.7 + random() * 0.8,
-            depth: 0.35 + random() * 0.65
-        };
-    });
-
-    drawNetwork(false);
-}
-
-function ibleSeed(w, h) {
-    return 173 + Math.round(w) * 7 + Math.round(h) * 13;
-}
-
-function calmFactor(x, y) {
-    const horizontal = Math.abs(x - width / 2) / (width / 2);
-    const vertical = Math.abs(y - height * 0.52) / (height / 2);
-    return Math.max(0.2, Math.min(1, horizontal * 1.3 + vertical * 0.55));
-}
-
-function drawNetwork(advance) {
-    context.clearRect(0, 0, width, height);
-    const linkDistance = width < 640 ? 155 : 205;
-
-    if (advance) {
-        if (isEnteringPortal) portalEnergy = Math.min(1, portalEnergy + 0.035);
-        points.forEach((point) => {
-            point.x += point.vx;
-            point.y += point.vy;
-            if (point.x < -20 || point.x > width + 20) point.vx *= -1;
-            if (point.y < -20 || point.y > height + 20) point.vy *= -1;
-        });
+    function measureAll() {
+        hyphenWidth = widthOf('-');
+        suffixWidth = widthOf('ible');
+        rootWidth = widthOf(root);
+        offsets = [...root].map((_, index) => widthOf(root.slice(0, index)));
     }
 
-    points.forEach((point, index) => {
-        const offsetX = pointer.x > -500 ? (pointer.x - width / 2) * point.depth * 0.008 : 0;
-        const offsetY = pointer.y > -500 ? (pointer.y - height / 2) * point.depth * 0.008 : 0;
-        const x = point.x + offsetX;
-        const y = point.y + offsetY;
+    function setRoot(next) {
+        root = next;
+        letters.forEach((letter) => letter.remove());
+        letters = [...root].map((character) => span('suffix-letter', character));
+        word.prepend(...letters);
+        measureAll();
+    }
 
-        for (let otherIndex = index + 1; otherIndex < points.length; otherIndex += 1) {
-            const other = points[otherIndex];
-            const otherX = other.x + offsetX;
-            const otherY = other.y + offsetY;
-            const dx = x - otherX;
-            const dy = y - otherY;
-            const distance = Math.hypot(dx, dy);
-            if (distance > linkDistance) continue;
+    // presence(index): how much of each root letter's width is set (0 to 1).
+    // alpha(index): each root letter's opacity. join: how far the hyphen has closed.
+    function render(presence, alpha, join) {
+        const open = 1 - join;
+        const widths = offsets.map((offset, index) => (offsets[index + 1] ?? rootWidth) - offset);
+        const set = widths.map((width, index) => width * presence(index));
+        const setWidth = set.reduce((sum, width) => sum + width, 0);
+        const junction = (setWidth - hyphenWidth * open - suffixWidth) / 2;
+        let x = junction - setWidth;
+        letters.forEach((letter, index) => {
+            const a = alpha(index);
+            letter.style.opacity = a.toFixed(3);
+            letter.style.transform = `translate(${x.toFixed(2)}px, ${((1 - a) * 0.04).toFixed(4)}em)`;
+            x += set[index];
+        });
+        hyphen.style.opacity = open.toFixed(3);
+        hyphen.style.transform = `translateX(${(junction - hyphenWidth / 2 + (hyphenWidth * open) / 2).toFixed(2)}px) scaleX(${open.toFixed(3)})`;
+        suffix.style.transform = `translateX(${(junction + hyphenWidth * open).toFixed(2)}px)`;
+    }
 
-            const midpointX = (x + otherX) / 2;
-            const midpointY = (y + otherY) / 2;
-            const pointerDistance = Math.hypot(pointer.x - midpointX, pointer.y - midpointY);
-            const pointerBoost = pointerDistance < 150 ? 0.16 * (1 - pointerDistance / 150) : 0;
-            const baseAlpha = (0.17 * (1 - distance / linkDistance) + pointerBoost) * calmFactor(midpointX, midpointY);
-            const alpha = Math.min(0.86, baseAlpha + portalEnergy * 0.42 * (1 - distance / linkDistance));
-            context.beginPath();
-            context.moveTo(x, y);
-            context.lineTo(otherX, otherY);
-            context.strokeStyle = portalEnergy > 0.15
-                ? `rgba(196, 181, 253, ${alpha})`
-                : `rgba(129, 140, 248, ${alpha})`;
-            context.lineWidth = 0.8 + portalEnergy * 1.4 + (pointerBoost > 0.03 ? 0.35 : 0);
-            context.stroke();
-        }
-
-        const pointerDistance = Math.hypot(pointer.x - x, pointer.y - y);
-        const isActive = pointerDistance < 125;
-        context.beginPath();
-        context.arc(x, y, point.radius + portalEnergy * 2.8 + (isActive ? 1.2 : 0), 0, Math.PI * 2);
-        context.fillStyle = isActive || portalEnergy > 0.15
-            ? `rgba(216, 180, 254, ${0.82 + portalEnergy * 0.18})`
-            : 'rgba(165, 180, 252, 0.7)';
-        context.fill();
-
-        if (point.radius > 2.7) {
-            context.beginPath();
-            context.arc(x, y, point.radius + 3.8, 0, Math.PI * 2);
-            context.strokeStyle = 'rgba(165, 180, 252, 0.3)';
-            context.lineWidth = 1;
-            context.stroke();
-        }
-    });
+    return { setRoot, measureAll, render };
 }
 
-function animateNetwork(time) {
-    if (!isVisible) {
-        frame = requestAnimationFrame(animateNetwork);
+/* The hero: adapt-, graph-, and viz- take turns attaching to "-ible". */
+
+const hero = document.querySelector('[data-hero]');
+const stage = document.querySelector('[data-suffix]');
+const roots = stage.dataset.roots.split(' ');
+const heroWord = createSuffixWord(stage);
+
+// One cycle per root, in milliseconds: rest on "-ible", set the root a letter
+// at a time, close the hyphen, hold the word, then let the root go.
+const CYCLE = 9500;
+function heroFrame(t) {
+    if (t < 7200) {
+        heroWord.render(
+            (index) => ease((t - 1500 - index * 190) / 520),
+            (index) => ease((t - 1560 - index * 190) / 620),
+            ease((t - 3300 - roots[rootIndex].length * 60) / 900)
+        );
+    } else {
+        const fade = 1 - ease((t - 7200) / 650);
+        const collapse = 1 - ease((t - 7500) / 1000);
+        heroWord.render(() => collapse, () => fade, 1 - ease((t - 7300) / 900));
+    }
+}
+
+let rootIndex = 0;
+let elapsed = 0;
+let lastTime = null;
+let heroVisible = true;
+let heroRunning = !reducedMotion;
+let rafId = 0;
+
+heroWord.setRoot(roots[rootIndex]);
+heroFrame(0);
+
+function tick(now) {
+    rafId = 0;
+    if (!heroRunning || !heroVisible || document.hidden) {
+        lastTime = null;
         return;
     }
-
-    if (time - lastFrame > 32) {
-        drawNetwork(true);
-        lastFrame = time;
+    if (lastTime !== null) elapsed += Math.min(now - lastTime, 100);
+    lastTime = now;
+    if (elapsed >= CYCLE) {
+        elapsed -= CYCLE;
+        rootIndex = (rootIndex + 1) % roots.length;
+        heroWord.setRoot(roots[rootIndex]);
     }
-    frame = requestAnimationFrame(animateNetwork);
+    heroFrame(elapsed);
+    rafId = requestAnimationFrame(tick);
 }
 
-hero.addEventListener('pointermove', (event) => {
-    const bounds = hero.getBoundingClientRect();
-    pointer.x = event.clientX - bounds.left;
-    pointer.y = event.clientY - bounds.top;
-}, { passive: true });
-
-hero.addEventListener('pointerleave', () => {
-    pointer.x = -1000;
-    pointer.y = -1000;
-});
-
-new ResizeObserver(buildNetwork).observe(hero);
+function resume() {
+    if (!rafId && heroRunning && heroVisible && !document.hidden) rafId = requestAnimationFrame(tick);
+}
 
 new IntersectionObserver(([entry]) => {
-    isVisible = entry.isIntersecting;
-}, { threshold: 0 }).observe(hero);
+    heroVisible = entry.isIntersecting;
+    resume();
+}).observe(stage);
 
-buildNetwork();
-if (!reducedMotion) frame = requestAnimationFrame(animateNetwork);
+document.addEventListener('visibilitychange', resume);
+
+new ResizeObserver(() => {
+    heroWord.measureAll();
+    heroFrame(elapsed);
+}).observe(stage);
+
+document.fonts.ready.then(() => {
+    heroWord.measureAll();
+    heroFrame(elapsed);
+    resume();
+});
+
+/* The portal into graphible. The hyphen draws out from the button and opens
+   into a field, "graph" joins "-ible", and the link follows after 2.5 s. */
 
 const portalButton = document.querySelector('[data-portal-button]');
-const portalOverlay = document.querySelector('[data-portal-overlay]');
+const portal = document.querySelector('[data-portal]');
+const portalStatus = document.querySelector('[data-portal-status]');
+const portalWord = createSuffixWord(document.querySelector('[data-portal-word]'));
+let isEnteringPortal = false;
+let portalTimer = 0;
+
+function runPortalWord(start) {
+    portalWord.setRoot('graph');
+    const frame = (now) => {
+        if (!isEnteringPortal) return;
+        const t = now - start;
+        portalWord.render(
+            (index) => ease((t - 1300 - index * 90) / 300),
+            (index) => ease((t - 1320 - index * 90) / 340),
+            ease((t - 1950) / 420)
+        );
+        if (t < 2600) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+}
 
 portalButton.addEventListener('click', (event) => {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
     if (reducedMotion) return;
 
     event.preventDefault();
     if (isEnteringPortal) return;
     isEnteringPortal = true;
-    isVisible = true;
+    heroRunning = false;
+
+    const bounds = portalButton.getBoundingClientRect();
+    portal.style.setProperty('--x', `${bounds.left + bounds.width / 2}px`);
+    portal.style.setProperty('--y', `${bounds.top + bounds.height / 2}px`);
+
     hero.classList.add('is-entering');
     portalButton.setAttribute('aria-disabled', 'true');
-    portalOverlay.setAttribute('aria-hidden', 'false');
+    portal.classList.add('is-active');
+    portalStatus.textContent = 'Entering graphible';
+    runPortalWord(performance.now());
 
-    window.setTimeout(() => {
-        portalOverlay.classList.add('is-active');
-    }, 800);
-
-    window.setTimeout(() => {
+    portalTimer = window.setTimeout(() => {
         window.location.assign(portalButton.href);
     }, 2500);
+});
+
+// Coming back through the history cache should show the page, not the portal.
+window.addEventListener('pageshow', (event) => {
+    if (!event.persisted || !isEnteringPortal) return;
+    window.clearTimeout(portalTimer);
+    isEnteringPortal = false;
+    heroRunning = !reducedMotion;
+    hero.classList.remove('is-entering');
+    portal.classList.remove('is-active');
+    portalButton.removeAttribute('aria-disabled');
+    portalStatus.textContent = '';
+    resume();
 });
