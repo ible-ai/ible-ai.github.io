@@ -18,14 +18,15 @@ This is a dependency-free static site served by GitHub Pages.
 .
 ├── index.html          # Semantic page structure and content
 ├── styles.css          # Layout, visual system, and responsive behavior
-├── script.js           # Navigation, network background, and graphible transition
+├── script.js           # Navigation, the hero's suffix motion, and the graphible transition
 ├── assets/
-│   └── favicon.svg     # Browser icon
+│   ├── favicon.svg     # Browser icon (the -i mark)
+│   └── og.png          # Link-preview card
 ├── CNAME               # Custom-domain configuration
 └── README.md
 ```
 
-There is no package manager, build command, framework, analytics script, or runtime dependency.
+There is no package manager, build command, framework, or analytics script. The only external request is the Fraunces typeface from Google Fonts.
 
 ## Run locally
 
@@ -42,9 +43,9 @@ Using a server is preferable to opening `index.html` directly because it matches
 ## Make changes
 
 - Edit page structure and copy in `index.html`.
-- Edit colors, type, spacing, and responsive behavior in `styles.css`.
-- Edit the navigation, canvas network, or graphible portal behavior in `script.js`.
-- Add a project as another `<article class="project-card">` inside `#projects .project-grid` and include its canonical project URL.
+- Edit colors, type, spacing, and responsive behavior in `styles.css`. The palette is the brand's paper set: paper `#f8fafc`, ink `#0f172a`, and indigo `#6366f1`, with a dark version for `prefers-color-scheme: dark`.
+- Edit the navigation, the hero's suffix motion, or the graphible portal in `script.js`. The roots that attach to "-ible" in the hero come from `data-roots` in `index.html`.
+- Add a project as another `<article class="project">` inside `#projects .project-grid` and include its canonical project URL.
 
 Keep the page dependency-free unless a new feature clearly requires a build system. Respect the existing `prefers-reduced-motion` rules when adding motion.
 
