@@ -218,6 +218,9 @@ portalButton.addEventListener('click', (event) => {
     const bounds = portalButton.getBoundingClientRect();
     portal.style.setProperty('--x', `${bounds.left + bounds.width / 2}px`);
     portal.style.setProperty('--y', `${bounds.top + bounds.height / 2}px`);
+    // Just long enough for both ends of the line to clear the screen.
+    const centre = bounds.left + bounds.width / 2;
+    portal.style.setProperty('--reach', `${2 * Math.max(centre, window.innerWidth - centre) + 120}px`);
 
     hero.classList.add('is-entering');
     portalButton.setAttribute('aria-disabled', 'true');

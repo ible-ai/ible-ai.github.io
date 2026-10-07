@@ -332,6 +332,7 @@ code { font-family: var(--mono); }
 .portal {
     --x: 50vw;
     --y: 50vh;
+    --reach: 240vmax;
     position: fixed;
     inset: 0;
     z-index: 100;
@@ -366,14 +367,14 @@ code { font-family: var(--mono); }
     background: var(--portal-fill);
 }
 
-.portal.is-active .portal-line { animation: portal-line 1000ms cubic-bezier(0.7, 0, 0.25, 1) 100ms both; }
-.portal.is-active .portal-fill { animation: portal-fill 650ms cubic-bezier(0.7, 0, 0.2, 1) 750ms both; }
+.portal.is-active .portal-line { animation: portal-line 1000ms cubic-bezier(0.45, 0, 0.2, 1) 100ms both; }
+.portal.is-active .portal-fill { animation: portal-fill 650ms cubic-bezier(0.7, 0, 0.2, 1) 750ms forwards; }
 
 @keyframes portal-line {
     0% { width: 1.75rem; opacity: 0; }
     8% { width: 1.75rem; opacity: 1; }
-    65% { width: 240vmax; opacity: 1; }
-    100% { width: 240vmax; opacity: 0; }
+    65% { width: var(--reach); opacity: 1; }
+    100% { width: var(--reach); opacity: 0; }
 }
 
 @keyframes portal-fill {
