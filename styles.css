@@ -128,10 +128,11 @@ code { font-family: var(--mono); }
     backdrop-filter: blur(14px);
 }
 
+/* The lockup has no descenders, so its bottom edge is the baseline the nav sits on. */
 .nav-container {
-    min-height: 76px;
+    padding: 26px 0 19px;
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
 }
 
@@ -511,7 +512,7 @@ code { font-family: var(--mono); }
     display: grid;
     grid-template-columns: 1fr auto auto;
     gap: 2.25rem;
-    align-items: center;
+    align-items: baseline;
 }
 
 .site-footer .logo { height: 20px; justify-self: start; }
@@ -540,7 +541,7 @@ code { font-family: var(--mono); }
 
     body { font-size: 16px; }
 
-    .nav-container { min-height: 64px; }
+    .nav-container { padding: 10px 0; }
     .logo { height: 22px; }
 
     .menu-button {
@@ -574,7 +575,7 @@ code { font-family: var(--mono); }
 
     .site-nav {
         position: absolute;
-        inset: 64px 0 auto;
+        inset: 100% 0 auto;
         padding: 0.5rem 1rem 1rem;
         display: none;
         flex-direction: column;
