@@ -412,12 +412,30 @@ code { font-family: var(--mono); }
 .copy:hover,
 .copy:focus-visible { color: var(--fg); background: var(--wash); }
 .copy svg { width: 1rem; height: 1rem; flex: none; }
-.copy .check-icon,
-.copy .copy-done { display: none; }
+.copy .check-icon { display: none; }
 .copy.is-copied { color: var(--accent-text); }
 .copy.is-copied .copy-icon { display: none; }
 .copy.is-copied .check-icon { display: block; }
-.copy.is-copied .copy-done { display: inline; }
+
+/* "Copied" floats below the button, so nothing around it moves. */
+.copy-done {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.4rem);
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(-3px);
+    pointer-events: none;
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.copy.is-copied .copy-done { opacity: 1; transform: none; }
 
 .project-link {
     color: var(--fg-2);
