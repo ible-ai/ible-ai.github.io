@@ -2,6 +2,7 @@ const header = document.querySelector('[data-header]');
 const menuButton = document.querySelector('[data-menu-button]');
 const nav = document.querySelector('[data-nav]');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const noHover = window.matchMedia('(hover: none)').matches;
 
 function updateHeader() {
     header.classList.toggle('is-scrolled', window.scrollY > 24);
@@ -34,9 +35,6 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('scroll', updateHeader, { passive: true });
 updateHeader();
 
-/* A word built from a root and "-ible". The root's letters fade in, the
-   word re-centres as it grows, and the hyphen closes up to join them. */
-
 const clamp = (value) => Math.min(1, Math.max(0, value));
 const ease = (value) => {
     const t = clamp(value);
@@ -50,7 +48,166 @@ function span(className, text) {
     return element;
 }
 
-function createSuffixWord(container) {
+/* Project titles. A title steps from its name to its address:
+   adaptible, adapt-ible, adapt.ible, adapt.ible.ai. The hyphen opens,
+   drops into a dot, and ".ai" is set after it. */
+
+const STEP_IN = 380;
+const STEP_OUT = 220;
+const LAST_STEP = 3;
+
+function createTitle(link) {
+    const name = link.textContent.trim();
+    const root = link.dataset.root;
+    const suffixText = name.slice(root.length);
+    const tailText = '.ai';
+
+    const word = span('title-word', '');
+    word.setAttribute('aria-hidden', 'true');
+    const measure = span('title-measure', '');
+    measure.setAttribute('aria-hidden', 'true');
+    const rootPart = span('title-root', root);
+    const hyphen = span('title-hyphen', '-');
+    const dot = span('title-dot', '.');
+    const suffix = span('title-suffix', suffixText);
+    const tail = [...tailText].map((character) => span('title-tail', character));
+    word.append(rootPart, hyphen, dot, suffix, ...tail);
+    link.textContent = '';
+    link.append(span('visually-hidden', name), word, measure);
+
+    const size = {};
+    const widthOf = (text) => {
+        measure.textContent = text;
+        return measure.getBoundingClientRect().width;
+    };
+
+    function measureAll() {
+        size.root = widthOf(root);
+        size.hyphen = widthOf('-');
+        size.dot = widthOf('.');
+        size.suffix = widthOf(name) - size.root;
+        const full = widthOf(suffixText + tailText);
+        const offsets = [...tailText].map((_, index) => widthOf(suffixText + tailText.slice(0, index)));
+        size.tail = offsets.map((offset, index) => (offsets[index + 1] ?? full) - offset);
+    }
+
+    let step = 0;
+    let target = 0;
+    let frame = 0;
+    let last = null;
+
+    // step runs from 0 to 3; each whole step is one stage, eased on its own,
+    // so the sequence pauses briefly between stages.
+    function render() {
+        const open = ease(step);
+        const morph = ease(step - 1);
+        const slot = open * (size.hyphen + (size.dot - size.hyphen) * morph);
+        const junction = size.root;
+
+        const hyphenWidth = open * (1 - 0.6 * morph);
+        hyphen.style.opacity = (open * (1 - morph)).toFixed(3);
+        hyphen.style.transform = `translate(${(junction + slot / 2 - size.hyphen / 2).toFixed(2)}px, ${(morph * 0.2).toFixed(3)}em) scale(${hyphenWidth.toFixed(3)}, ${(1 + 0.5 * morph).toFixed(3)})`;
+        dot.style.opacity = (open * morph).toFixed(3);
+        dot.style.transform = `translateX(${(junction + slot / 2 - size.dot / 2).toFixed(2)}px)`;
+        suffix.style.transform = `translateX(${(junction + slot).toFixed(2)}px)`;
+
+        let x = junction + slot + size.suffix;
+        tail.forEach((letter, index) => {
+            const p = ease((step - 2 - index * 0.22) / 0.56);
+            letter.style.opacity = p.toFixed(3);
+            letter.style.transform = `translate(${x.toFixed(2)}px, ${((1 - p) * 0.04).toFixed(4)}em)`;
+            x += size.tail[index] * p;
+        });
+        link.style.width = `${x.toFixed(2)}px`;
+    }
+
+    function tick(now) {
+        frame = 0;
+        const elapsed = last === null ? 16 : Math.min(now - last, 64);
+        last = now;
+        const speed = 1 / (target > step ? STEP_IN : STEP_OUT);
+        step = target > step ? Math.min(target, step + elapsed * speed) : Math.max(target, step - elapsed * speed);
+        render();
+        if (step !== target) frame = requestAnimationFrame(tick);
+        else last = null;
+    }
+
+    function go(next, instantly = reducedMotion) {
+        target = next;
+        if (instantly) {
+            step = next;
+            render();
+            return;
+        }
+        if (!frame) frame = requestAnimationFrame(tick);
+    }
+
+    measureAll();
+    render();
+    return {
+        go,
+        refresh() { measureAll(); render(); },
+        get settled() { return step === target; },
+    };
+}
+
+const projects = [...document.querySelectorAll('[data-project]')].map((card) => {
+    const link = card.querySelector('.project-title');
+    const title = createTitle(link);
+    const state = { card, link, title, hovered: false, focused: false, played: false };
+
+    state.update = () => {
+        const active = state.hovered || state.focused;
+        card.classList.toggle('is-active', active);
+        title.go(active ? LAST_STEP : 0);
+    };
+
+    link.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'touch') return;
+        state.hovered = true;
+        state.update();
+    });
+    link.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'touch') return;
+        state.hovered = false;
+        state.update();
+    });
+    link.addEventListener('focus', () => { state.focused = true; state.update(); });
+    link.addEventListener('blur', () => { state.focused = false; state.update(); });
+    return state;
+});
+
+document.fonts.ready.then(() => projects.forEach(({ title }) => title.refresh()));
+new ResizeObserver(() => projects.forEach(({ title }) => title.refresh()))
+    .observe(document.querySelector('[data-project-grid]'));
+
+// Without hover, each title plays once as its card scrolls into view.
+if (noHover) {
+    const seen = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const state = projects.find((project) => project.card === entry.target);
+            seen.unobserve(entry.target);
+            if (reducedMotion) {
+                state.title.go(LAST_STEP, true);
+                return;
+            }
+            state.card.classList.add('is-active');
+            state.title.go(LAST_STEP);
+            window.setTimeout(() => {
+                state.card.classList.remove('is-active');
+                if (!state.focused) state.title.go(0);
+            }, LAST_STEP * STEP_IN + 1600);
+        });
+    }, { threshold: 0.6 });
+    projects.forEach(({ card }) => seen.observe(card));
+}
+
+/* The portal into graphible, from its title. The hyphen draws out from the
+   title and opens into a field, "graph" joins "-ible", and the link follows
+   after 2.5 s. */
+
+function createPortalWord(container) {
     const word = span('suffix-word', '');
     const measure = span('suffix-measure', '');
     const hyphen = span('suffix-hyphen', '-');
@@ -58,7 +215,6 @@ function createSuffixWord(container) {
     word.append(hyphen, suffix);
     container.append(word, measure);
 
-    let root = '';
     let letters = [];
     let offsets = [];
     let rootWidth = 0;
@@ -70,23 +226,18 @@ function createSuffixWord(container) {
         return measure.getBoundingClientRect().width;
     };
 
-    function measureAll() {
+    function setRoot(root) {
+        letters.forEach((letter) => letter.remove());
+        letters = [...root].map((character) => span('suffix-letter', character));
+        word.prepend(...letters);
         hyphenWidth = widthOf('-');
         suffixWidth = widthOf('ible');
         rootWidth = widthOf(root);
         offsets = [...root].map((_, index) => widthOf(root.slice(0, index)));
     }
 
-    function setRoot(next) {
-        root = next;
-        letters.forEach((letter) => letter.remove());
-        letters = [...root].map((character) => span('suffix-letter', character));
-        word.prepend(...letters);
-        measureAll();
-    }
-
     // presence(index): how much of each root letter's width is set (0 to 1).
-    // alpha(index): each root letter's opacity. join: how far the hyphen has closed.
+    // alpha(index): each letter's opacity. join: how far the hyphen has closed.
     function render(presence, alpha, join) {
         const open = 1 - join;
         const widths = offsets.map((offset, index) => (offsets[index + 1] ?? rootWidth) - offset);
@@ -105,89 +256,13 @@ function createSuffixWord(container) {
         suffix.style.transform = `translateX(${(junction + hyphenWidth * open).toFixed(2)}px)`;
     }
 
-    return { setRoot, measureAll, render };
+    return { setRoot, render };
 }
 
-/* The hero: adapt-, graph-, and viz- take turns attaching to "-ible". */
-
-const hero = document.querySelector('[data-hero]');
-const stage = document.querySelector('[data-suffix]');
-const roots = stage.dataset.roots.split(' ');
-const heroWord = createSuffixWord(stage);
-
-// One cycle per root, in milliseconds: rest on "-ible", set the root a letter
-// at a time, close the hyphen, hold the word, then let the root go.
-const CYCLE = 9500;
-function heroFrame(t) {
-    if (t < 7200) {
-        heroWord.render(
-            (index) => ease((t - 1500 - index * 190) / 520),
-            (index) => ease((t - 1560 - index * 190) / 620),
-            ease((t - 3300 - roots[rootIndex].length * 60) / 900)
-        );
-    } else {
-        const fade = 1 - ease((t - 7200) / 650);
-        const collapse = 1 - ease((t - 7500) / 1000);
-        heroWord.render(() => collapse, () => fade, 1 - ease((t - 7300) / 900));
-    }
-}
-
-let rootIndex = 0;
-let elapsed = 0;
-let lastTime = null;
-let heroVisible = true;
-let heroRunning = !reducedMotion;
-let rafId = 0;
-
-heroWord.setRoot(roots[rootIndex]);
-heroFrame(0);
-
-function tick(now) {
-    rafId = 0;
-    if (!heroRunning || !heroVisible || document.hidden) {
-        lastTime = null;
-        return;
-    }
-    if (lastTime !== null) elapsed += Math.min(now - lastTime, 100);
-    lastTime = now;
-    if (elapsed >= CYCLE) {
-        elapsed -= CYCLE;
-        rootIndex = (rootIndex + 1) % roots.length;
-        heroWord.setRoot(roots[rootIndex]);
-    }
-    heroFrame(elapsed);
-    rafId = requestAnimationFrame(tick);
-}
-
-function resume() {
-    if (!rafId && heroRunning && heroVisible && !document.hidden) rafId = requestAnimationFrame(tick);
-}
-
-new IntersectionObserver(([entry]) => {
-    heroVisible = entry.isIntersecting;
-    resume();
-}).observe(stage);
-
-document.addEventListener('visibilitychange', resume);
-
-new ResizeObserver(() => {
-    heroWord.measureAll();
-    heroFrame(elapsed);
-}).observe(stage);
-
-document.fonts.ready.then(() => {
-    heroWord.measureAll();
-    heroFrame(elapsed);
-    resume();
-});
-
-/* The portal into graphible. The hyphen draws out from the button and opens
-   into a field, "graph" joins "-ible", and the link follows after 2.5 s. */
-
-const portalButton = document.querySelector('[data-portal-button]');
-const portal = document.querySelector('[data-portal]');
+const portalLink = document.querySelector('[data-portal]');
+const portal = document.querySelector('[data-portal-overlay]');
 const portalStatus = document.querySelector('[data-portal-status]');
-const portalWord = createSuffixWord(document.querySelector('[data-portal-word]'));
+const portalWord = createPortalWord(document.querySelector('[data-portal-word]'));
 let isEnteringPortal = false;
 let portalTimer = 0;
 
@@ -206,42 +281,93 @@ function runPortalWord(start) {
     requestAnimationFrame(frame);
 }
 
-portalButton.addEventListener('click', (event) => {
+portalLink.addEventListener('click', (event) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
     if (reducedMotion) return;
 
     event.preventDefault();
     if (isEnteringPortal) return;
     isEnteringPortal = true;
-    heroRunning = false;
 
-    const bounds = portalButton.getBoundingClientRect();
-    portal.style.setProperty('--x', `${bounds.left + bounds.width / 2}px`);
+    const bounds = portalLink.getBoundingClientRect();
+    const centre = bounds.left + bounds.width / 2;
+    portal.style.setProperty('--x', `${centre}px`);
     portal.style.setProperty('--y', `${bounds.top + bounds.height / 2}px`);
     // Just long enough for both ends of the line to clear the screen.
-    const centre = bounds.left + bounds.width / 2;
     portal.style.setProperty('--reach', `${2 * Math.max(centre, window.innerWidth - centre) + 120}px`);
 
-    hero.classList.add('is-entering');
-    portalButton.setAttribute('aria-disabled', 'true');
+    document.body.classList.add('is-entering');
+    portalLink.setAttribute('aria-disabled', 'true');
     portal.classList.add('is-active');
     portalStatus.textContent = 'Entering graphible';
     runPortalWord(performance.now());
 
     portalTimer = window.setTimeout(() => {
-        window.location.assign(portalButton.href);
+        window.location.assign(portalLink.href);
     }, 2500);
 });
 
 // Coming back through the history cache should show the page, not the portal.
 window.addEventListener('pageshow', (event) => {
-    if (!event.persisted || !isEnteringPortal) return;
+    if (!event.persisted) return;
     window.clearTimeout(portalTimer);
     isEnteringPortal = false;
-    heroRunning = !reducedMotion;
-    hero.classList.remove('is-entering');
+    document.body.classList.remove('is-entering');
     portal.classList.remove('is-active');
-    portalButton.removeAttribute('aria-disabled');
+    portalLink.removeAttribute('aria-disabled');
     portalStatus.textContent = '';
-    resume();
+    projects.forEach((state) => {
+        state.hovered = false;
+        state.focused = document.activeElement === state.link;
+        state.card.classList.remove('is-active');
+        state.title.go(state.focused ? LAST_STEP : 0, true);
+    });
 });
+
+/* Click to copy the install commands. */
+
+const copyStatus = document.querySelector('[data-copy-status]');
+
+function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text).catch(() => copyFallback(text));
+    }
+    return copyFallback(text);
+}
+
+function copyFallback(text) {
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.append(field);
+    field.select();
+    const ok = document.execCommand('copy');
+    field.remove();
+    return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+}
+
+document.querySelectorAll('[data-copy]').forEach((button) => {
+    let reset = 0;
+    button.addEventListener('click', () => {
+        const text = button.dataset.copy;
+        copyText(text).then(() => {
+            button.classList.add('is-copied');
+            copyStatus.textContent = '';
+            requestAnimationFrame(() => { copyStatus.textContent = `Copied ${text}`; });
+            window.clearTimeout(reset);
+            reset = window.setTimeout(() => button.classList.remove('is-copied'), 1800);
+        }, () => {
+            copyStatus.textContent = 'Copy failed';
+        });
+    });
+});
+
+/* The cue to the projects shows only while the grid is below the first screen. */
+
+const cue = document.querySelector('[data-scroll-cue]');
+new IntersectionObserver(([entry]) => {
+    const below = !entry.isIntersecting && entry.boundingClientRect.top > 0;
+    cue.classList.toggle('is-visible', below);
+}, { rootMargin: '0px 0px -12% 0px' }).observe(document.querySelector('[data-project-grid]'));

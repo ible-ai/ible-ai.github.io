@@ -6,7 +6,7 @@ The site introduces three public projects:
 
 | Project | What it does | Links |
 | --- | --- | --- |
-| graphible | Interactive, AI-powered learning graphs | [Live app](https://graph.ible.ai) · [Source](https://github.com/ible-ai/graphible) |
+| graphible | Type a topic and an LLM streams it onto a canvas as a graph of linked concepts | [Live app](https://graph.ible.ai) · [Source](https://github.com/ible-ai/graphible) |
 | adaptible | A small language model that keeps its conversations and retrains itself on its own corrections | [Source](https://github.com/ible-ai/adaptible) · [Results](https://github.com/ible-ai/adaptible/tree/main/results) |
 | vizible | Minimal, deterministic color-coded debugging for Python | [Source](https://github.com/ible-ai/vizible) |
 
@@ -18,7 +18,7 @@ This is a dependency-free static site served by GitHub Pages.
 .
 ├── index.html          # Semantic page structure and content
 ├── styles.css          # Layout, visual system, and responsive behavior
-├── script.js           # Navigation, the hero's suffix motion, and the graphible transition
+├── script.js           # Navigation, project titles, copy buttons, and the graphible transition
 ├── assets/
 │   ├── favicon.svg     # Browser icon (the -i mark)
 │   └── og.png          # Link-preview card
@@ -44,8 +44,8 @@ Using a server is preferable to opening `index.html` directly because it matches
 
 - Edit page structure and copy in `index.html`.
 - Edit colors, type, spacing, and responsive behavior in `styles.css`. The palette is the brand's paper set: paper `#f8fafc`, ink `#0f172a`, and indigo `#6366f1`, with a dark version for `prefers-color-scheme: dark`.
-- Edit the navigation, the hero's suffix motion, or the graphible portal in `script.js`. The roots that attach to "-ible" in the hero come from `data-roots` in `index.html`.
-- Add a project as another `<article class="project">` inside `#projects .project-grid` and include its canonical project URL.
+- Edit the navigation, the project-title motion, the copy buttons, or the graphible portal in `script.js`. Each title steps from its name to its address (adaptible, adapt-ible, adapt.ible, adapt.ible.ai); the root comes from the title's `data-root` in `index.html`. graphible's title carries `data-portal`, which plays the transition before following the link.
+- Add a project as another `<article class="project" data-project>` inside `#projects .project-grid`, with its site as the title link and its repository as the GitHub icon link.
 
 Keep the page dependency-free unless a new feature clearly requires a build system. Respect the existing `prefers-reduced-motion` rules when adding motion.
 
@@ -56,7 +56,7 @@ GitHub Pages serves the repository from `main`. The root `CNAME` maps the site t
 Before pushing:
 
 1. Preview the page at desktop and mobile widths.
-2. Test the mobile menu, keyboard focus states, and graphible portal transition.
+2. Test the mobile menu, keyboard focus states, the project titles, the copy buttons, and the graphible portal transition.
 3. Check the project links and in-page navigation.
 4. Confirm `assets/favicon.svg`, `styles.css`, and `script.js` load without errors.
 5. Run `git diff --check`.
