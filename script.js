@@ -32,6 +32,33 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+// Theme: the toggle saves a choice; until then the page follows the system.
+const themeToggle = document.querySelector('[data-theme-toggle]');
+const themeColor = document.querySelector('[data-theme-color]');
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    themeColor.content = theme === 'dark' ? '#0a0a0a' : '#f8fafc';
+    themeToggle.setAttribute('aria-label', `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`);
+}
+
+function savedTheme() {
+    try { return localStorage.getItem('ible-theme'); } catch { return null; }
+}
+
+themeToggle.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem('ible-theme', next); } catch {}
+});
+
+systemDark.addEventListener('change', (event) => {
+    if (!savedTheme()) applyTheme(event.matches ? 'dark' : 'light');
+});
+
+applyTheme(document.documentElement.dataset.theme || 'light');
+
 window.addEventListener('scroll', updateHeader, { passive: true });
 updateHeader();
 

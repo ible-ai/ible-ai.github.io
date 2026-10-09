@@ -26,6 +26,24 @@
     --header-height: 70px;
 }
 
+/* Dark mode is a neutral near-black, #0a0a0a as in graphible, with no blue in it. The theme script in
+   the page's head sets data-theme from the saved choice or the system setting. */
+:root[data-theme="dark"] {
+    --bg: #0a0a0a;
+    --fg: #ededed;
+    --fg-2: #d4d4d4;
+    --fg-3: #a3a3a3;
+    --accent: #818cf8;
+    --accent-text: #a5b4fc;
+    --rule: rgba(250, 250, 250, 0.14);
+    --rule-strong: rgba(250, 250, 250, 0.85);
+    --wash: rgba(250, 250, 250, 0.08);
+    --header-bg: rgba(10, 10, 10, 0.86);
+    --portal-fill: #0a0a0a;
+    --focus: #818cf8;
+    color-scheme: dark;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
@@ -149,6 +167,37 @@ code { font-family: var(--mono); }
 .site-nav a:focus-visible { color: var(--fg); }
 
 .menu-button { display: none; }
+
+.nav-end {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+}
+
+/* Shows a moon in light mode and a sun in dark mode: the theme it switches to. */
+.theme-toggle {
+    width: 34px;
+    height: 34px;
+    margin: -8px -8px -8px 0;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    align-self: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--fg-2);
+    cursor: pointer;
+    transition: color 160ms ease, background-color 160ms ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible { color: var(--fg); background: var(--wash); }
+
+.theme-toggle svg { width: 18px; height: 18px; }
+.theme-toggle .icon-sun,
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 
 /* Hero: sized against the viewport's height, so the projects stay in the first view. */
 

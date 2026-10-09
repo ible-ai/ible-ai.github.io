@@ -43,7 +43,7 @@ Using a server is preferable to opening `index.html` directly because it matches
 ## Make changes
 
 - Edit page structure and copy in `index.html`.
-- Edit colors, type, spacing, and responsive behavior in `styles.css`. The palette is the brand's paper set: paper `#f8fafc`, ink `#0f172a`, and indigo `#6366f1`. The page stays on paper in every system theme.
+- Edit colors, type, spacing, and responsive behavior in `styles.css`. The palette is the brand's paper set: paper `#f8fafc`, ink `#0f172a`, and indigo `#6366f1`. Dark mode is a neutral near-black, `#0a0a0a`, as in graphible. It follows the system setting until the header toggle saves a choice (localStorage key `ible-theme`).
 - Edit the navigation, the project-title motion, the copy buttons, or the graphible portal in `script.js`. Each title steps from its name to its address (adaptible, adapt-ible, adapt.ible, adapt.ible.ai); the root comes from the title's `data-root` in `index.html`. graphible's title carries `data-portal`, which plays the transition before following the link.
 - Add a project as another `<article class="project" data-project>` inside `#projects .project-grid`, with its site as the title link and its repository as the GitHub icon link.
 
